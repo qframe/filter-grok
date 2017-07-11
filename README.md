@@ -61,23 +61,7 @@ $ go run main.go
 
 ```bash
 $ go test -bench=Grok  -benchtime=5s
-2017/05/20 19:38:16 [II] Dispatch broadcast for Back, Data and Tick
-2017/05/20 19:38:16.627589 [  INFO]            grok Name:grok       >> Add patterns from directory '/usr/local/src/github.com/qnib/qframe-filter-grok/resources/patterns'
-2017/05/20 19:38:16.631901 [NOTICE]            grok Name:grok       >> Start grok filter v0.1.10
-2017/05/20 19:38:16.684517 [  INFO]            grok Name:grok       >> Benchmark sends 1 messages to grok
-BenchmarkGrok-2   	2017/05/20 19:38:16.688889 [II] Dispatch broadcast for Back, Data and Tick
-2017/05/20 19:38:16.696598 [  INFO]            grok Name:grok       >> Add patterns from directory '/usr/local/src/github.com/qnib/qframe-filter-grok/resources/patterns'
-2017/05/20 19:38:16.700789 [NOTICE]            grok Name:grok       >> Start grok filter v0.1.10
-2017/05/20 19:38:16.751433 [  INFO]            grok Name:grok       >> Benchmark sends 100 messages to grok
-2017/05/20 19:38:16.761260 [II] Dispatch broadcast for Back, Data and Tick
-2017/05/20 19:38:16.763537 [  INFO]            grok Name:grok       >> Add patterns from directory '/usr/local/src/github.com/qnib/qframe-filter-grok/resources/patterns'
-2017/05/20 19:38:16.767631 [NOTICE]            grok Name:grok       >> Start grok filter v0.1.10
-2017/05/20 19:38:16.818787 [  INFO]            grok Name:grok       >> Benchmark sends 10000 messages to grok
-2017/05/20 19:38:17.287998 [II] Dispatch broadcast for Back, Data and Tick
-2017/05/20 19:38:17.290940 [  INFO]            grok Name:grok       >> Add patterns from directory '/usr/local/src/github.com/qnib/qframe-filter-grok/resources/patterns'
-2017/05/20 19:38:17.295367 [NOTICE]            grok Name:grok       >> Start grok filter v0.1.10
-2017/05/20 19:38:17.346071 [  INFO]            grok Name:grok       >> Benchmark sends 200000 messages to grok
-  200000	     40593 ns/op
+BenchmarkGrok-4   	  200000	     55903 ns/op
 PASS
-ok  	github.com/qnib/qframe-filter-grok	8.979s
+ok  	github.com/qframe/filter-grok	12.040s
 ```
