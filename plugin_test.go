@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"reflect"
 )
+
 /******* Helper */
 func Receive(qchan qtypes.QChan, source string, endCnt int) {
 	bg := qchan.Data.Join()
@@ -37,8 +38,6 @@ func Receive(qchan qtypes.QChan, source string, endCnt int) {
 		}
 	}
 }
-
-
 
 /******* Tests */
 func TestPlugin_Match(t *testing.T) {
@@ -146,7 +145,6 @@ func TestPlugin_Run(t *testing.T) {
 	}
 }
 
-
 /******* Benchmarks */
 func BenchmarkGrok(b *testing.B) {
 	endCnt := b.N
@@ -193,5 +191,3 @@ func BenchmarkGrok(b *testing.B) {
 		}
 	}
 }
-
-
