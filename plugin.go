@@ -84,29 +84,10 @@ func (p *Plugin) Run() {
 	p.InitGrok()
 	p.MyID = qutils.GetGID()
 	bg := p.QChan.Data.Join()
-	inputs := p.GetInputs()
-	srcSuccess := p.CfgBoolOr("source-success", true)
 	msgKey := p.CfgStringOr("overwrite-message-key", "")
 	for {
 		val := bg.Recv()
 		switch val.(type) {
-		case qtypes.QMsg:
-			qm := val.(qtypes.QMsg)
-			if qm.SourceID == p.MyID {
-				continue
-			}
-			if !qutils.IsInput(inputs, qm.Source) {
-				continue
-			}
-			if qm.SourceSuccess != srcSuccess {
-				continue
-			}
-			qm.Type = "filter"
-			qm.Source = p.Name
-			qm.SourceID = p.MyID
-			qm.SourcePath = append(qm.SourcePath, p.Name)
-			qm.KV, qm.SourceSuccess = p.Match(qm.Msg)
-			p.QChan.Data.Send(qm)
 		case qtypes.Message:
 			qm := val.(qtypes.Message)
 			if p.StopProcessingMessage(qm, false) {

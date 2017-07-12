@@ -11,6 +11,33 @@ import (
 	"github.com/stretchr/testify/assert"
 	"reflect"
 )
+/******* Helper */
+func Receive(qchan qtypes.QChan, source string, endCnt int) {
+	bg := qchan.Data.Join()
+	allCnt := 1
+	cnt := 1
+	for {
+		select {
+		case val := <-bg.Read:
+			allCnt++
+			switch val.(type) {
+			case qtypes.Message:
+				qm := val.(qtypes.Message)
+				if qm.IsLastSource(source) {
+					cnt++
+				}
+			default:
+				fmt.Printf("received msg %d: type=%s\n", allCnt, reflect.TypeOf(val))
+
+			}
+		}
+		if endCnt == cnt {
+			qchan.Data.Send(cnt)
+			break
+		}
+	}
+}
+
 
 
 /******* Tests */
@@ -38,36 +65,89 @@ func TestPlugin_Match(t *testing.T) {
 	g1, ok1 := p1.Match("test1 sometext")
 	assert.True(t, ok1, "test1 should match pattern")
 	assert.Equal(t, map[string]string{"number": "1", "str": "sometext"}, g1)
+	g2, ok2 := p1.Match("testsometext")
+	assert.False(t, ok2, "should NOT match pattern")
+	assert.Equal(t, map[string]string{}, g2)
+}
+
+func TestPlugin_GetOverwriteKeys(t *testing.T) {
+	cfgMap := map[string]string{}
+	cfg := config.NewConfig([]config.Provider{config.NewStatic(cfgMap)})
+	qChan := qtypes.NewCfgQChan(cfg)
+	p, err := New(qChan, cfg, "grok")
+	assert.NoError(t, err)
+	assert.Equal(t, []string{""}, p.GetOverwriteKeys())
+	cfgMap["filter.grok.overwrite-keys"] = "msg"
+	cfg = config.NewConfig([]config.Provider{config.NewStatic(cfgMap)})
+	p, err = New(qChan, cfg, "grok")
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"msg"}, p.GetOverwriteKeys())
 
 }
 
-/******* Benchmarks */
-func Receive(qchan qtypes.QChan, source string, endCnt int) {
-	bg := qchan.Data.Join()
-	allCnt := 1
-	cnt := 1
+func TestPlugin_GetPattern(t *testing.T) {
+	cfgMap := map[string]string{
+		"log.level": "error",
+		"filter.grok.pattern-dir": "./resources/patterns/",
+		"filter.grok.pattern": "test%{INT:number}",
+	}
+	cfg := config.NewConfig([]config.Provider{config.NewStatic(cfgMap)})
+	qChan := qtypes.NewCfgQChan(cfg)
+	p, err := New(qChan, cfg, "grok")
+	assert.NoError(t, err)
+	p.InitGrok()
+	assert.Equal(t, "test%{INT:number}", p.GetPattern())
+
+}
+
+func TestPlugin_Run(t *testing.T) {
+	endCnt := 2
+	cfgMap := map[string]string{
+		"log.level": "error",
+		"filter.grok.pattern": "test%{INT:number}",
+		"filter.grok.inputs": "test",
+		"filter.grok.pattern-dir": "./resources/patterns/",
+	}
+	cfg := config.NewConfig([]config.Provider{config.NewStatic(cfgMap)})
+	qChan := qtypes.NewCfgQChan(cfg)
+	qChan.Broadcast()
+	go Receive(qChan, "grok", endCnt)
+	p, err := New(qChan, cfg, "grok")
+	if err != nil {
+		log.Printf("[EE] Failed to create filter: %v", err)
+		return
+	}
+	dc := qChan.Data.Join()
+	go p.Run()
+	time.Sleep(time.Duration(50)*time.Millisecond)
+	p.Log("info", fmt.Sprintf("Benchmark sends %d messages to grok", endCnt))
+	qm := qtypes.NewMessage(qtypes.NewBase("test"), "test", "testMsg", "none")
+	for i := 1; i <= endCnt; i++ {
+		msg := fmt.Sprintf("test%d", i)
+		qm.Message = msg
+		qChan.Data.Send(qm)
+	}
+	done := false
 	for {
 		select {
-		case val := <-bg.Read:
-			allCnt++
+		case val := <- dc.Read:
 			switch val.(type) {
-			case qtypes.Message:
-				qm := val.(qtypes.Message)
-				if qm.IsLastSource(source) {
-					cnt++
-				}
-			default:
-				fmt.Printf("received msg %d: type=%s\n", allCnt, reflect.TypeOf(val))
-
+			case int:
+				vali := val.(int)
+				assert.Equal(t, endCnt, vali)
+				done = true
 			}
+		case <-time.After(5 * time.Second):
+			t.Fatal("metrics receive timeout")
 		}
-		if endCnt == cnt {
-			qchan.Data.Send(cnt)
+		if done {
 			break
 		}
 	}
 }
 
+
+/******* Benchmarks */
 func BenchmarkGrok(b *testing.B) {
 	endCnt := b.N
 	cfgMap := map[string]string{
