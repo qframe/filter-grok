@@ -175,7 +175,7 @@ func (g *Grok) AddPatternsFromPath(path string) error {
 
 		file.Close()
 	}
-
+	fmt.Printf("%v\n", filePatterns)
 	return g.AddPatternsFromMap(filePatterns)
 }
 
