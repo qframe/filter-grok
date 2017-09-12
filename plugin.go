@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 	"github.com/vjeantet/grok"
@@ -13,7 +14,8 @@ import (
 	"github.com/qframe/types/qchannel"
 	"github.com/qframe/types/messages"
 	"github.com/qframe/types/metrics"
-	"strconv"
+
+	"sync"
 )
 
 const (
@@ -25,10 +27,12 @@ const (
 
 type Plugin struct {
 	*qtypes_plugin.Plugin
-	grok    *grok.Grok
-	isMetric bool
-	isBuffered bool
-	pattern string
+	mu 				sync.Mutex
+	grok    		*grok.Grok
+	expectMetric	bool
+	expectJson 		bool
+	isBuffered 		bool
+	pattern 		string
 }
 
 func (p *Plugin) GetOverwriteKeys() []string {
@@ -118,11 +122,22 @@ func (p *Plugin) sendMetric(t time.Time, tags, kv map[string]string) {
 	p.QChan.Data.Send(m)
 }
 
-// Run fetches everything from the Data channel and flushes it to stdout
+// Lock locks the plugins' mutex.
+func (p *Plugin) Lock() {
+	p.mu.Lock()
+}
+
+// Unlock unlocks the plugins' mutex.
+func (p *Plugin) Unlock() {
+	p.mu.Unlock()
+}
+
+// Run fetches everything from the Data channel and flushes it to stdout.
 func (p *Plugin) Run() {
 	p.Log("notice", fmt.Sprintf("Start grok filter v%s", p.Version))
 	p.InitGrok()
-	p.isMetric = p.CfgBoolOr("expect-metric", false)
+	p.expectMetric = p.CfgBoolOr("expect-metric", false)
+	p.expectJson = p.CfgBoolOr("expect-json", false)
 	p.isBuffered = p.CfgBoolOr("buffer-metric", false)
 	bg := p.QChan.Data.Join()
 	msgKey := p.CfgStringOr("overwrite-message-key", "")
@@ -139,7 +154,7 @@ func (p *Plugin) Run() {
 			kv, cm.SourceSuccess = p.Match(cm.Message.Message)
 			if cm.SourceSuccess {
 				p.Log("debug", fmt.Sprintf("Matched pattern '%s'", p.pattern))
-				if p.isMetric {
+				if p.expectMetric {
 					tags := cm.Tags
 					tags["container_id"] = cm.Container.ID
 					tags["image"] = cm.Container.Config.Image
@@ -148,11 +163,17 @@ func (p *Plugin) Run() {
 					p.sendMetric(cm.Time, tags, kv)
 					continue
 				}
-				for k,v := range kv {
-					p.Log("debug", fmt.Sprintf("    %15s: %s", k,v ))
-					cm.Tags[k] = v
-					if msgKey == k {
-						cm.Message.Message = v
+				if p.expectJson {
+					p.Lock()
+					cm.Message.ParseJsonMap(p.Plugin, kv)
+					p.Unlock()
+				} else {
+					for k,v := range kv {
+						p.Log("debug", fmt.Sprintf("    %15s: %s", k, v))
+						cm.Tags[k] = v
+						if msgKey == k {
+							cm.Message.Message = v
+						}
 					}
 				}
 			} else {
@@ -169,9 +190,14 @@ func (p *Plugin) Run() {
 			kv, qm.SourceSuccess = p.Match(qm.Message)
 			if qm.SourceSuccess {
 				p.Log("debug", fmt.Sprintf("Matched pattern '%s'", p.pattern))
-				if p.isMetric {
+				if p.expectMetric {
 					p.sendMetric(qm.Time, qm.Tags, kv)
 					continue
+				}
+				if p.expectJson {
+					p.Lock()
+					qm.ParseJsonMap(p.Plugin, kv)
+					p.Unlock()
 				}
 				for k,v := range kv {
 					p.Log("debug", fmt.Sprintf("    %15s: %s", k,v ))
@@ -184,6 +210,8 @@ func (p *Plugin) Run() {
 				p.Log("debug", fmt.Sprintf("No match of '%s' for message '%s'", p.pattern, qm.Message))
 			}
 			p.QChan.Data.Send(qm)
+		default:
+			p.Log("trace", fmt.Sprintf("No match for type '%s'", reflect.TypeOf(val)))
 		}
 	}
 }
