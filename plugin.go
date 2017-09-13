@@ -82,7 +82,9 @@ func (p *Plugin) InitGrok() {
 	pDir, err := p.CfgString("pattern-dir")
 	if err == nil && pDir != "" {
 		err := filepath.Walk(pDir, func(path string, f os.FileInfo, err error) error {
-			pFileSet.Add(path)
+			if ! f.IsDir() {
+				pFileSet.Add(path)
+			}
 			return nil
 		})
 		if err != nil {
@@ -102,7 +104,7 @@ func (p *Plugin) InitGrok() {
 		if err != nil {
 			p.Log("error", err.Error())
 		} else {
-			p.Log("debug", fmt.Sprintf("Added pattern-file '%s'", f))
+			p.Log("info", fmt.Sprintf("Added pattern-file '%s'", f))
 		}
 	}
 }
