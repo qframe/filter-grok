@@ -2,10 +2,10 @@ package qfilter_grok
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"github.com/vjeantet/grok"
 	"github.com/zpatrick/go-config"
@@ -15,7 +15,6 @@ import (
 	"github.com/qframe/types/messages"
 	"github.com/qframe/types/metrics"
 
-	"sync"
 )
 
 const (
@@ -52,11 +51,15 @@ func New(qChan qtypes_qchannel.QChan, cfg *config.Config, name string) (p Plugin
 
 func (p *Plugin) Match(str string) (map[string]string, bool) {
 	match := true
-	p.Log("trace", fmt.Sprintf("Match '%s' against '%s'", str, p.pattern))
 	val, _ := p.grok.Parse(p.pattern, str)
 	keys := reflect.ValueOf(val).MapKeys()
 	if len(keys) == 0 {
 		match = false
+	}
+	if match {
+		p.Log("trace", fmt.Sprintf("Pattern '%s' matched '%s'", p.pattern, str))
+	} else {
+		p.Log("trace", fmt.Sprintf("Pattern '%s' DID NOT match '%s'", p.pattern, str))
 	}
 	return val, match
 }
@@ -72,19 +75,17 @@ func (p *Plugin) InitGrok() {
 	if err != nil {
 		p.Log("fatal", "Could not find pattern in config")
 	}
-	pDir, err := p.CfgString("pattern-dir")
-	if err != nil {
-		if _, err := os.Stat(defPatternDir); err == nil {
-			pDir = defPatternDir
-			p.Log("info", fmt.Sprintf("Add patterns from DEFAULT directory '%s'", pDir))
+	pFiles, err := p.CfgString("pattern-files")
+	for _, f := range strings.Split(pFiles, ",") {
+		if f == "" {
+			continue
 		}
-	} else {
-		p.Log("info", fmt.Sprintf("Add patterns from directory '%s'", pDir))
-	}
-	if _, err := os.Stat(pDir); err != nil {
-		p.Log("error", fmt.Sprintf("Patterns directory does not exist '%s'", pDir))
-	} else {
-		p.grok.AddPatternsFromPath(pDir)
+		err := p.grok.AddPatternsFromPath(f)
+		if err != nil {
+			p.Log("error", err.Error())
+		} else {
+			p.Log("debug", fmt.Sprintf("Added pattern-file '%s'", f))
+		}
 	}
 }
 

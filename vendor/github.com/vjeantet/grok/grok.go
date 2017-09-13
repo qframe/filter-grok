@@ -155,7 +155,6 @@ func (g *Grok) AddPatternsFromPath(path string) error {
 	// only one error can be raised, when pattern is malformed
 	// pattern is hard-coded "/*" so we ignore err
 	files, _ := filepath.Glob(path)
-
 	var filePatterns = map[string]string{}
 	for _, fileName := range files {
 		file, err := os.Open(fileName)
@@ -172,10 +171,8 @@ func (g *Grok) AddPatternsFromPath(path string) error {
 				filePatterns[names[0]] = names[1]
 			}
 		}
-
 		file.Close()
 	}
-	fmt.Printf("%v\n", filePatterns)
 	return g.AddPatternsFromMap(filePatterns)
 }
 

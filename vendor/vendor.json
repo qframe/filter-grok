@@ -433,6 +433,54 @@
 			"revisionTime": "2016-01-10T10:55:54Z"
 		},
 		{
+			"checksumSHA1": "ZokxRO/FavchTs9BrbmiCZNrzO4=",
+			"path": "github.com/qframe/types/constants",
+			"revision": "243298f9a5781a5d7d70207c1fb3272011af839c",
+			"revisionTime": "2017-09-12T12:27:59Z"
+		},
+		{
+			"checksumSHA1": "1bYhfK64PMCq1kdgHv5sj1c6lYA=",
+			"path": "github.com/qframe/types/container/stats",
+			"revision": "243298f9a5781a5d7d70207c1fb3272011af839c",
+			"revisionTime": "2017-09-12T12:27:59Z"
+		},
+		{
+			"checksumSHA1": "bu3TUas4vsPjIgv919gHxlXT+YE=",
+			"path": "github.com/qframe/types/helper",
+			"revision": "243298f9a5781a5d7d70207c1fb3272011af839c",
+			"revisionTime": "2017-09-12T12:27:59Z"
+		},
+		{
+			"checksumSHA1": "kYdKCzlnbBdGekr5Alb5T1fZHZk=",
+			"path": "github.com/qframe/types/messages",
+			"revision": "243298f9a5781a5d7d70207c1fb3272011af839c",
+			"revisionTime": "2017-09-12T12:27:59Z"
+		},
+		{
+			"checksumSHA1": "utE2O+Muo8cEWLDxs/YUVxfzlCo=",
+			"path": "github.com/qframe/types/metrics",
+			"revision": "243298f9a5781a5d7d70207c1fb3272011af839c",
+			"revisionTime": "2017-09-12T12:27:59Z"
+		},
+		{
+			"checksumSHA1": "FMEJSBzNo0AArJt8s0qFWocdook=",
+			"path": "github.com/qframe/types/plugin",
+			"revision": "243298f9a5781a5d7d70207c1fb3272011af839c",
+			"revisionTime": "2017-09-12T12:27:59Z"
+		},
+		{
+			"checksumSHA1": "bI9DmB1P2XfVkog5EvRu01AZ4Uc=",
+			"path": "github.com/qframe/types/qchannel",
+			"revision": "243298f9a5781a5d7d70207c1fb3272011af839c",
+			"revisionTime": "2017-09-12T12:27:59Z"
+		},
+		{
+			"checksumSHA1": "aWT8tf2NLTwFLrrTSEZCraccjMI=",
+			"path": "github.com/qframe/types/ticker",
+			"revision": "243298f9a5781a5d7d70207c1fb3272011af839c",
+			"revisionTime": "2017-09-12T12:27:59Z"
+		},
+		{
 			"checksumSHA1": "SLi6BuR9tBlsEtE1EO8c7w3JACw=",
 			"path": "github.com/qnib/qframe-types",
 			"revision": "93c4a0eb25fc154add4e0c8600a371697a1bdacc",
