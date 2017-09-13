@@ -14,7 +14,10 @@ import (
 	"github.com/qframe/types/qchannel"
 	"github.com/qframe/types/messages"
 	"github.com/qframe/types/metrics"
+	"github.com/deckarep/golang-set"
 
+	"path/filepath"
+	"os"
 )
 
 const (
@@ -75,12 +78,27 @@ func (p *Plugin) InitGrok() {
 	if err != nil {
 		p.Log("fatal", "Could not find pattern in config")
 	}
+	pFileSet := mapset.NewSet()
+	pDir, err := p.CfgString("pattern-dir")
+	if err == nil && pDir != "" {
+		err := filepath.Walk(pDir, func(path string, f os.FileInfo, err error) error {
+			pFileSet.Add(path)
+			return nil
+		})
+		if err != nil {
+			p.Log("error", err.Error())
+		}
+	}
 	pFiles, err := p.CfgString("pattern-files")
 	for _, f := range strings.Split(pFiles, ",") {
 		if f == "" {
 			continue
 		}
-		err := p.grok.AddPatternsFromPath(f)
+		pFileSet.Add(f)
+	}
+	for f := range pFileSet.Iterator().C {
+		p.Log("trace", fmt.Sprintf("Iterate %s", f))
+		err := p.grok.AddPatternsFromPath(f.(string))
 		if err != nil {
 			p.Log("error", err.Error())
 		} else {

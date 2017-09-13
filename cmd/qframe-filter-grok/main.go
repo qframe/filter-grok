@@ -11,6 +11,11 @@ import (
 	"os"
 )
 
+type TestCase struct {
+	Pattern string
+	Tests []Test
+}
+
 type Test struct {
 	Str string
 	Success bool
@@ -19,19 +24,16 @@ type Test struct {
 
 
 var (
-	/*ip4_1 = Test{"192.168.0.1", true, map[string]string{"ip":"192.168.0.1"}}
-	ip4_2 = Test{"127.0.0.1", true, map[string]string{"ip":"127.0.0.1"}}
-	ip6_1 = Test{":::1", true, map[string]string{"ip":":::1"}}
-	ip6_2 = Test{"2001:0db8:85a3:0000:0000:8a2e:0370:7334", true, map[string]string{"ip":"2001:0db8:85a3:0000:0000:8a2e:0370:7334"}}
-	ipCase = map[string]Test{
-		"ip4_1":ip4_1,
-		"ip4_2":ip4_2,
-		"ip6_1":ip6_1,
-		"ip6_2":ip6_2,
-	}*/
-	int_1 = Test{"test1", true, map[string]string{"num":"1"}}
-	intCase = map[string]Test{
-		"int_1":int_1,
+	openTSDB1 = Test{"put sys.cpu.load 1505290630 40", true, map[string]string{"key":"sys.cpu.load", "time":"1505290630", "value":"40"}}
+	openTSDB2 = Test{
+		"put sys.cpu.load 1505290630 40 host=webserver1 cpu=1", true,
+		map[string]string{"key":"sys.cpu.load", "time":"1505290630", "value":"40", "tags":"host=webserver1 cpu=1"}}
+	openTSDB3 = Test{
+		"sys.cpu.load 1505290630 40 host=webserver1 cpu=1", true,
+		map[string]string{"key":"sys.cpu.load", "time":"1505290630", "value":"40", "tags":"host=webserver1 cpu=1"}}
+	openTSDBCase = TestCase{
+		"%{OPENTSDB}",
+		[]Test{openTSDB1,openTSDB2,openTSDB3},
 	}
 )
 
@@ -44,8 +46,8 @@ func main() {
 	qChan := qtypes_qchannel.NewQChan()
 	qChan.Broadcast()
 	cfgMap := map[string]string{
-		"log.level": "trace",
-		"filter.grok.pattern": "test%{INT:num}",
+		"log.level": "debug",
+		"filter.grok.pattern": openTSDBCase.Pattern,
 		"filter.grok.pattern-dir": "./patterns/",
 		"filter.grok.inputs": "test",
 	}
@@ -64,7 +66,7 @@ func main() {
 	ticker := time.NewTicker(time.Millisecond*time.Duration(2000)).C
 	bg := qChan.Data.Join()
 	res := []string{}
-	for _, c := range intCase {
+	for _, c := range openTSDBCase.Tests {
 		b := qtypes_messages.NewBase("test")
 		qm := qtypes_messages.NewMessage(b, c.Str)
 		log.Printf("Send message '%s", qm.Message)
@@ -80,16 +82,16 @@ func main() {
 					continue
 				}
 				res = append(res, qm.GetLastSource())
-				log.Printf("#### Received result from grok (pattern:%s) filter for input: %s\n", p.GetPattern(), qm.Message)
+				log.Printf("#### Received result from grok (pattern:%s) filter for input: %s || Tags:%v\n", p.GetPattern(), qm.Message, qm.Tags)
 			}
-			if len(res) == len(intCase) {
+			if len(res) == len(openTSDBCase.Tests) {
 				break
 			}
 		case <- ticker:
 			log.Println("Ticker came along, time's up...")
 			os.Exit(1)
 		}
-		if len(res) == len(intCase) {
+		if len(res) == len(openTSDBCase.Tests) {
 			break
 		}
 	}

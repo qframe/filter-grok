@@ -58,6 +58,12 @@
 			"revisionTime": "2017-06-26T23:16:45Z"
 		},
 		{
+			"checksumSHA1": "AHhRdnSt25KL4h34UqsDRUXUpRo=",
+			"path": "github.com/deckarep/golang-set",
+			"revision": "b3af78e1d186c53529e3c916055d734665f68121",
+			"revisionTime": "2017-08-26T19:28:09Z"
+		},
+		{
 			"checksumSHA1": "xvSa+kz+sCPBTlSLqARaBgniqjE=",
 			"origin": "github.com/qnib/qframe-types/vendor/github.com/docker/docker/api/types",
 			"path": "github.com/docker/docker/api/types",
