@@ -44,10 +44,38 @@ var (
 		"%{OPENTSDB}",
 		[]Test{openTSDB1,openTSDB2,openTSDB3},
 	}
+	syslog1 = Test{"<134>1 2017-09-13T18:35:47.443Z host - - event - Hello World", true, map[string]string{"syslog5424_msg":`Hello World`}}
+	ceeRes1 = map[string]string{
+		"syslog5424_pri": "134",
+		"syslog5424_ver": "1",
+		"syslog5424_ts": "2017-09-13T18:35:47.443Z",
+		"syslog5424_host": "host",
+		"syslog5424_app": "app",
+		"syslog5424_proc": "proc",
+		"syslog5424_sd": "",
+		"syslog5424_msg":`@cee:{"time":"2017-09-13T18:35:47.443Z"}`,
+
+	}
+	ceeLog1 = Test{`<134>1 2017-09-13T18:35:47.443Z host app proc msgid - @cee:{"time":"2017-09-13T18:35:47.443Z"}`, true, ceeRes1}
+	ceeResWithSD = map[string]string{
+		"syslog5424_pri": "134",
+		"syslog5424_ver": "1",
+		"syslog5424_ts": "2017-09-13T18:35:47.443Z",
+		"syslog5424_host": "host",
+		"syslog5424_app": "app",
+		"syslog5424_proc": "proc",
+		"syslog5424_sd": "[key=val]",
+		"syslog5424_msg":`Hello World`,
+	}
+	ceeLogWithSD = Test{`<134>1 2017-09-13T18:35:47.443Z host app proc msgid [key=val] Hello World`, true, ceeResWithSD}
+	syslogCase = TestCase{
+		"%{QNIB_SYSLOG5424LINE}",
+		[]Test{syslog1,ceeLog1,ceeLogWithSD},
+	}
 	cfgMap = map[string]string{
 		"log.level": "trace",
 		"filter.grok.inputs": "test",
-		"filter.grok.pattern-files": "./resources/patterns/opentsdb",
+		"filter.grok.pattern-files": "./resources/patterns/opentsdb,./resources/patterns/linux-syslog",
 	}
 )
 
@@ -78,7 +106,8 @@ func RunTest(t *testing.T,tCase TestCase) {
 		for k,v := range c.result {
 			val, ok := got[k]
 			assert.True(t, ok, fmt.Sprintf("key %s could not be found in result", k))
-			assert.Equal(t, v, val)
+			m := v == val
+			assert.True(t, m, fmt.Sprintf("'%s'!='%s'", v, val))
 		}
 	}
 }
@@ -116,6 +145,10 @@ func TestPlugin_MatchIP(t *testing.T) {
 
 func TestPlugin_MatchOpenTSDB(t *testing.T) {
 	RunTest(t, openTSDBCase)
+}
+
+func TestPlugin_MatchSyslog5424(t *testing.T) {
+	RunTest(t, syslogCase)
 }
 
 func TestPlugin_MatchInt(t *testing.T) {

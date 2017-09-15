@@ -164,7 +164,7 @@ func (p *Plugin) Run() {
 					}
 				}
 			} else {
-				p.Log("debug", fmt.Sprintf("No match of '%s' for message '%s'", p.pattern, cm.Message))
+				p.Log("debug", fmt.Sprintf("No match of '%s' for message '%s'", p.pattern, cm.Message.Message))
 			}
 			p.QChan.Data.Send(cm)
 		case qtypes_messages.Message:
