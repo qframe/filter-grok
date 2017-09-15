@@ -2,6 +2,7 @@ package qtypes_messages
 
 import (
 	"encoding/json"
+	"github.com/deckarep/golang-set"
 	"github.com/qframe/types/plugin"
 	"fmt"
 )
@@ -20,7 +21,7 @@ func NewMessage(b Base, msg string) Message {
 	return m
 }
 
-func (m *Message) ParseJsonMap(p *qtypes_plugin.Plugin, kv map[string]string) {
+func (m *Message) ParseJsonMap(p *qtypes_plugin.Plugin, keys mapset.Set, kv map[string]string) {
 	for _, txt := range kv {
 		p.Log("debug", fmt.Sprintf("txt to parse to json: %s", txt))
 		byt := []byte(txt)
