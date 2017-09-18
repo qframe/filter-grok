@@ -123,6 +123,7 @@ func (p *Plugin) Unlock() {
 func (p *Plugin) Run() {
 	p.Log("notice", fmt.Sprintf("Start grok filter v%s", p.Version))
 	p.InitGrok()
+	ignoreContainerEvents := p.CfgBoolOr("ignore-container-events", true)
 	expectJsonKeys := strings.Split(p.CfgStringOr("expect-json-keys", ""), ",")
 	for _, k := range expectJsonKeys {
 		p.expectJsonKeys.Add(k)
@@ -144,16 +145,23 @@ func (p *Plugin) Run() {
 			if cm.SourceSuccess {
 				p.Log("debug", fmt.Sprintf("Matched pattern '%s'", p.pattern))
 				if p.expectJsonKeys.Cardinality() > 0 {
+					newKv := cm.Message.ParseJsonMap(p.Plugin, p.expectJsonKeys, kv)
 					p.Lock()
-					cm.Message.ParseJsonMap(p.Plugin, p.expectJsonKeys, kv)
-					p.Unlock()
-				} else {
-					for k,v := range kv {
-						p.Log("debug", fmt.Sprintf("    %15s: %s", k, v))
-						cm.Tags[k] = v
-						if msgKey == k {
-							cm.Message.Message = v
+					for k,v := range newKv {
+						if oldV, ok := cm.Tags[k]; !ok {
+							cm.Tags[k] = v
+						} else {
+							p.Log("debug", fmt.Sprintf("Won't overwrite tag '%s=%s' with val '%s'", k, oldV, v))
+
 						}
+					}
+					p.Unlock()
+				}
+				for k,v := range kv {
+					p.Log("debug", fmt.Sprintf("    %15s: %s", k, v))
+					cm.Tags[k] = v
+					if msgKey == k {
+						cm.Message.Message = v
 					}
 				}
 			} else {
@@ -190,6 +198,9 @@ func (p *Plugin) Run() {
 			}
 			p.QChan.Data.Send(qm)
 		default:
+			if ignoreContainerEvents {
+				continue
+			}
 			p.Log("trace", fmt.Sprintf("No match for type '%s'", reflect.TypeOf(val)))
 		}
 	}
