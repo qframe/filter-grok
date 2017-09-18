@@ -20,15 +20,12 @@ const (
 	version = "0.1.14"
 	pluginTyp = "filter"
 	pluginPkg = "grok"
-	defPatternDir = "/etc/grok-patterns"
 )
 
 type Plugin struct {
 	*qtypes_plugin.Plugin
 	mu 				sync.Mutex
 	grok    		*grok.Grok
-	expectJsonKeys 	mapset.Set
-	isBuffered 		bool
 	pattern 		string
 }
 
@@ -44,7 +41,6 @@ func (p *Plugin) GetOverwriteKeys() []string {
 func New(qChan qtypes_qchannel.QChan, cfg *config.Config, name string) (p Plugin, err error) {
 	p = Plugin{
 		Plugin: qtypes_plugin.NewNamedPlugin(qChan, cfg, pluginTyp, pluginPkg,  name, version),
-		expectJsonKeys: mapset.NewSet(),
 	}
 	return p, err
 }
@@ -124,10 +120,6 @@ func (p *Plugin) Run() {
 	p.Log("notice", fmt.Sprintf("Start grok filter v%s", p.Version))
 	p.InitGrok()
 	ignoreContainerEvents := p.CfgBoolOr("ignore-container-events", true)
-	expectJsonKeys := strings.Split(p.CfgStringOr("expect-json-keys", ""), ",")
-	for _, k := range expectJsonKeys {
-		p.expectJsonKeys.Add(k)
-	}
 	bg := p.QChan.Data.Join()
 	msgKey := p.CfgStringOr("overwrite-message-key", "")
 	for {
@@ -143,20 +135,7 @@ func (p *Plugin) Run() {
 			var kv map[string]string
 			kv, cm.SourceSuccess = p.Match(cm.Message.Message)
 			if cm.SourceSuccess {
-				p.Log("debug", fmt.Sprintf("Matched pattern '%s'", p.pattern))
-				if p.expectJsonKeys.Cardinality() > 0 {
-					newKv := cm.Message.ParseJsonMap(p.Plugin, p.expectJsonKeys, kv)
-					p.Lock()
-					for k,v := range newKv {
-						if oldV, ok := cm.Tags[k]; !ok {
-							cm.Tags[k] = v
-						} else {
-							p.Log("debug", fmt.Sprintf("Won't overwrite tag '%s=%s' with val '%s'", k, oldV, v))
-
-						}
-					}
-					p.Unlock()
-				}
+				p.Log("debug", fmt.Sprintf("Matched pattern '%s': ", p.pattern))
 				for k,v := range kv {
 					p.Log("debug", fmt.Sprintf("    %15s: %s", k, v))
 					cm.Tags[k] = v
@@ -178,17 +157,11 @@ func (p *Plugin) Run() {
 			qm.SourceSuccess = SourceSuccess
 			if qm.SourceSuccess {
 				p.Log("debug", fmt.Sprintf("Matched pattern '%s'", p.pattern))
-				if p.expectJsonKeys.Cardinality() > 0 {
-					p.Lock()
-					qm.ParseJsonMap(p.Plugin, p.expectJsonKeys, kv)
-					p.Unlock()
-				} else {
-					for k,v := range kv {
-						p.Log("trace", fmt.Sprintf("    %15s: %s", k,v ))
-						qm.Tags[k] = v
-						if msgKey == k {
-							qm.Message = v
-						}
+				for k,v := range kv {
+					p.Log("trace", fmt.Sprintf("    %15s: %s", k,v ))
+					qm.Tags[k] = v
+					if msgKey == k {
+						qm.Message = v
 					}
 				}
 				p.QChan.Data.Send(qm)
